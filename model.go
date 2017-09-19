@@ -2,11 +2,13 @@ package model
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
 )
 
 var dataInstance *js.Object
+var vmInstance *js.Object
 
 func chkInit() {
 	if dataInstance == nil {
@@ -18,24 +20,19 @@ func chkInit() {
 	}
 }
 
-type Watcher func(val, prev interface{})
-
-func AddRoot(key string, val interface{}) error {
+func Object(path string) *js.Object {
 	chkInit()
-	if dataInstance.Get(key) != js.Undefined {
-		return errors.New("Duplicated key in AddRoot")
+	obj := dataInstance.Get("data")
+	chunks := strings.Split(path, ".")
+	for _, chunk := range chunks {
+		tmp := obj.Get(chunk)
+		if tmp == js.Undefined {
+			tmp = js.Global.Get("Object").New()
+			obj.Set(chunk, tmp)
+		}
+		obj = tmp
 	}
-	dataInstance.Set(key, val)
-	return nil
-}
-
-func AddData(key string, val interface{}) error {
-	chkInit()
-	if dataInstance.Get("data").Get(key) != js.Undefined {
-		return errors.New("Duplicated key in AddData")
-	}
-	dataInstance.Get("data").Set(key, val)
-	return nil
+	return obj
 }
 
 func AddMethod(key string, val interface{}) error {
@@ -69,10 +66,26 @@ func AddWatch(key string, cbf interface{}) error {
 	return nil
 }
 
-func Ready() {
-	js.Global.Set("vm", js.Global.Get("Vue").New(dataInstance))
+func Ready(mount string) {
+	if mount != "" {
+		dataInstance.Set("el", mount)
+	}
+	vmInstance = js.Global.Get("Vue").New(dataInstance)
+	js.Global.Set("vm", vmInstance)
 }
 
-func Object() *js.Object {
-	return js.Global.Get("Object").New()
+func InternalDataModel() *js.Object {
+	return dataInstance
+}
+
+func Vm() *js.Object {
+	return vmInstance
+}
+
+func Set(obj *js.Object, key interface{}, value interface{}) {
+	js.Global.Get("Vue").Call("set", obj, key, value)
+}
+
+func Delete(obj *js.Object, key interface{}) {
+	js.Global.Get("Vue").Call("delete", obj, key)
 }
