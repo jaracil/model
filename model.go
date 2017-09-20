@@ -8,7 +8,6 @@ import (
 )
 
 var dataInstance *js.Object
-var vmInstance *js.Object
 
 func chkInit() {
 	if dataInstance == nil {
@@ -66,20 +65,15 @@ func AddWatch(key string, cbf interface{}) error {
 	return nil
 }
 
-func Ready(mount string) {
-	if mount != "" {
-		dataInstance.Set("el", mount)
+func Ready(modelName string) {
+	if modelName == "" {
+		modelName = "dataModel"
 	}
-	vmInstance = js.Global.Get("Vue").New(dataInstance)
-	js.Global.Set("vm", vmInstance)
+	js.Global.Set(modelName, dataInstance)
 }
 
 func InternalDataModel() *js.Object {
 	return dataInstance
-}
-
-func Vm() *js.Object {
-	return vmInstance
 }
 
 func Set(obj *js.Object, key interface{}, value interface{}) {
